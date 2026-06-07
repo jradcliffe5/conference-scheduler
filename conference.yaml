@@ -107,3 +107,21 @@ review:
     - "Long oral (30 min)"
     - "Short oral (15 min)"
     - "Poster"
+
+# ── Participant outcome emails (make_draft_emails.py) ─────────────────────────
+# Creates DRAFTS only (never sends).  The IMAP app password is read from the env
+# var named below — never put the password in this file.
+emails:
+  from_name:     "Conference SOC"
+  from_address:  "you@gmail.com"        # the Gmail account whose Drafts get filled
+  reply_to:      ""                      # optional
+  imap_host:     "imap.gmail.com"
+  imap_port:     993
+  drafts_folder: "[Gmail]/Drafts"
+  password_env:  "DRAFT_EMAIL_PASSWORD"  # env var holding the Gmail app password
+  subject:       "{conf_name}: outcome of your abstract submission ({abstract_id})"
+  # {greeting_name} {title} {abstract_id} {conf_name} {conf_venue} are substituted;
+  # the per-category {outcome} text (oral / poster / not accepted) is generated.
+  signature: |
+    With best wishes,
+    The {conf_name} SOC

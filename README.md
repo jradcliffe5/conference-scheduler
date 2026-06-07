@@ -1,7 +1,8 @@
 # conference-scheduler
 
 A small, config-driven toolkit for running a scientific conference's abstract
-review and programme scheduling in Excel. Three stages, one YAML config:
+review, programme scheduling, and participant notification in Excel. Four
+stages, one YAML config:
 
 ```
  raw abstracts ──► generate_review.py ──► reviewer workbook (reviewers score)
@@ -13,6 +14,9 @@ review and programme scheduling in Excel. Three stages, one YAML config:
                               │
                               ▼
                     filled programme grid
+                              │
+                              ▼
+              make_draft_emails.py ──► per-participant outcome DRAFTS
 ```
 
 Everything conference-specific — dates, sessions, breaks, file names, SOC
@@ -56,6 +60,11 @@ python generate_schedule.py --config conference.yaml
 
 # 3. Place the scored talks into the grid
 python fill_schedule.py --config conference.yaml          # or --dry-run
+
+# 4. (after the schedule is confirmed) draft per-participant outcome emails
+python make_draft_emails.py --config conference.yaml                  # preview .eml
+DRAFT_EMAIL_PASSWORD=<app-pw> \
+    python make_draft_emails.py --config conference.yaml --create-drafts
 ```
 
 `--config` defaults to `conference.yaml`, so you can omit it if that's your file.
@@ -67,9 +76,28 @@ python fill_schedule.py --config conference.yaml          # or --dry-run
 | `generate_review.py` | `review.raw_abstracts` (raw submissions) | reviewer workbook: Summary, Distribution, Abstracts, Scores Summary, one tab per SOC member |
 | `generate_schedule.py` | the YAML only | blank `schedule_file`: Programme grid + hidden `_META` |
 | `fill_schedule.py` | `input_abstracts` (scored) + the blank grid | filled Programme grid + Posters sheet |
+| `make_draft_emails.py` | confirmed `schedule_file` + `input_abstracts` | one outcome **draft** per participant (`.eml` previews, or Gmail Drafts via IMAP) |
 
 `schedule_config.py` is the shared loader that parses the YAML into a `Conf`
-object used by all three scripts.
+object used by all four scripts.
+
+### Drafting outcome emails
+
+`make_draft_emails.py` reads the **confirmed** schedule, works out each
+submitter's outcome (oral with day/time/session, poster, or not accepted),
+personalises a message, and creates a **draft** — it never sends.
+
+- **Default (`--dry-run` implied):** writes one `.eml` per participant to
+  `draft_emails/` and prints a summary. Touches nothing online.
+- **`--create-drafts`:** appends the messages to your Gmail **Drafts** folder over
+  IMAP, using a Google [App Password](https://support.google.com/accounts/answer/185833)
+  read from the env var in `emails.password_env` (never stored in the YAML). You
+  review/edit/send them yourself.
+
+Addresses are extracted from the submitter field; missing or malformed ones are
+flagged and their drafts get a `[CHECK ADDRESS]` subject prefix so nothing slips
+out unchecked. Configure sender, IMAP host, folder, subject and signature under
+the `emails:` section of `conference.yaml`.
 
 ## Key config knobs
 

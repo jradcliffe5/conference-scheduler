@@ -4,6 +4,10 @@ output/*.xlsx
 *.xlsx
 ~$*.xlsx
 
+# Draft email previews (contain participant names/addresses)
+draft_emails/
+*.eml
+
 # Python
 __pycache__/
 *.py[cod]

@@ -108,6 +108,10 @@ class Conf:
     # Kept as a raw sub-mapping so that stage's many knobs don't bloat this class.
     REVIEW: dict[str, Any] = field(default_factory=dict)
 
+    # Participant-notification settings (see make_draft_emails.py): from-address,
+    # IMAP host/folder, subject + body templates.  Raw sub-mapping like REVIEW.
+    EMAILS: dict[str, Any] = field(default_factory=dict)
+
     def duration_for_type(self, talk_type: str) -> int:
         return {
             "Invited": self.LONG_MIN,
@@ -206,4 +210,6 @@ def load(path: str) -> Conf:
         SESSION_HAS_BREAK_AFTER = session_has_break,
 
         REVIEW = raw.get("review", {}) or {},
+
+        EMAILS = raw.get("emails", {}) or {},
     )
