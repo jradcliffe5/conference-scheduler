@@ -1,0 +1,109 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Conference configuration — drives the whole pipeline:
+#   1. generate_review.py    (raw abstracts   -> reviewer workbook)
+#   2. generate_schedule.py  (blank programme grid)
+#   3. fill_schedule.py      (scored abstracts -> filled grid)
+#
+# Copy this file per conference and edit the values; nothing in the .py files
+# needs changing.  The values below are a worked example (EVN Symposium 2026).
+# Put your .xlsx files under data/ and outputs land in output/ (both gitignored).
+# ─────────────────────────────────────────────────────────────────────────────
+
+conf_name:  "EVN Symposium 2026"
+conf_venue: "Manchester, UK"
+conf_start: "2026-09-14"        # ISO date of day 0
+num_days:   5
+
+# Reviewed-abstracts workbook (after reviewers enter scores); read by fill_schedule.py.
+# schedule_file is the programme grid both schedule scripts share.
+input_abstracts: "data/abstract_reviews.xlsx"
+schedule_file:   "output/schedule.xlsx"
+
+# ── Programme grid ────────────────────────────────────────────────────────────
+slot_min: 15                    # minutes per time-row
+session_blocks:                 # [label, start_h, start_m, end_h, end_m]
+  - ["Morning 1",    9,  0, 10, 30]
+  - ["Morning 2",   11,  0, 12, 30]
+  - ["Afternoon 1", 14,  0, 15, 30]
+  - ["Afternoon 2", 16,  0, 17, 30]
+breaks:                         # [label, after_session_index]
+  - ["Break  10:30 – 11:00", 0]
+  - ["Lunch  12:30 – 14:00", 1]
+  - ["Break  15:30 – 16:00", 2]
+
+# Pre-filled / locked cells. (day_index, session_index, text [, num_slots [, start_slot]])
+fixed_entries:
+  - [0, 0, "Registration",      4]
+  - [0, 0, "Opening ceremony",  2]
+  - [2, 3, "Users' meeting",    6]
+  - [4, 2, "Closing ceremony",  1, 5]
+  - [4, 3, "End of conference", 6]
+
+# Poster-sparkler blocks. (day_index, session_index [, start_slot [, num_slots]])
+sparkler_sessions:
+  - [0, 3, 2, 4]
+
+# ── Talk filling ──────────────────────────────────────────────────────────────
+long_min:     30
+short_min:    15
+sparkler_min: 2
+invited_ids:  []                # contributed IDs to force-treat as invited
+random_seed:  42                # null => new random layout each run
+
+# Topic grouping: tagged talks above the threshold cluster into dedicated session(s).
+station_tag:       "Station"    # "" to disable
+station_threshold: 7.5
+station_sessions:               # preferred sessions, in fill order (day, session)
+  - [0, 1]
+  - [4, 0]
+
+# ── Spreadsheet mapping (header-name based; the genericity layer) ──────────────
+# Each logical field lists acceptable header texts (case-insensitive). The first
+# present header wins, so a sheet with columns in any order/name still works.
+scores_sheet:    "Scores ranked"
+abstracts_sheet: "Abstracts"
+column_aliases:
+  id:               ["Abstract ID", "ID"]
+  title:            ["Title / Topic", "Title", "Topic"]
+  avg_score:        ["Avg Score", "Average Score", "Score"]
+  suggested_format: ["Suggested Format", "Format"]
+  submitter:        ["Submitter", "Author"]
+  topic_tag:        ["Comments", "Topic", "Tag"]
+abstracts_aliases:
+  id:        ["Abstract ID", "ID"]
+  title:     ["Title"]
+  submitter: ["Author", "Submitter"]
+
+# suggested-format value (case-insensitive) -> resolved talk type + minutes
+format_map:
+  "Invited talk": {type: "Invited", minutes: 30}
+  "Long oral":    {type: "Long",    minutes: 30}
+  "Short oral":   {type: "Short",   minutes: 15}
+  "Poster":       {type: "Poster",  minutes: 2}
+fallback_type: "Poster"         # used when a format value matches nothing above
+
+id_pattern:             '^[AI]\d+$'   # accepted abstract IDs (A001, I1, ...)
+contributed_id_pattern: '^A\d+$'      # poster-fallback (contributed-only) IDs
+
+# ── Upstream: reviewer-workbook generator ─────────────────────────────────────
+review:
+  raw_abstracts: "data/raw_abstracts.xlsx"        # raw submissions export
+  output:        "output/abstract_reviews.xlsx"
+  soc_members:   [PA, OB, MJ, YK, HK, MM, ZP, JP, JR, CS, AW]
+  min_reviews:   6
+  seed:          99
+  skip_rows:     1
+  review_types:  ["Contributed Talk"]    # contribution types to distribute for review
+  # Raw-abstracts column map: 1-based index or header name; null = auto/skip.
+  columns:
+    id:      null                          # null => auto-number A001, A002, ...
+    title:   "Abstract Title"
+    text:    "Abstract"
+    name:    "Corresponding Author (Name, Email & Affiliation)"
+    gender:  null
+    country: null
+    type:    "Presentation type"
+  presentation_options:                    # reviewer dropdown choices
+    - "Long oral (30 min)"
+    - "Short oral (15 min)"
+    - "Poster"

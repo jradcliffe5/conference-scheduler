@@ -1,0 +1,4 @@
+# Put your input .xlsx files here (gitignored):
+#   - raw_abstracts.xlsx     : raw submissions export (input to generate_review.py)
+#   - abstract_reviews.xlsx  : reviewer workbook after scoring (input to fill_schedule.py)
+# Paths are configured in conference.yaml (input_abstracts / review.raw_abstracts).

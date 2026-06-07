@@ -1,0 +1,13 @@
+# Conference data and generated workbooks (may contain personal author details)
+data/*.xlsx
+output/*.xlsx
+*.xlsx
+~$*.xlsx
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.DS_Store
