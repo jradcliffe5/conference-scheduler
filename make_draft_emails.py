@@ -112,9 +112,14 @@ def parse_schedule(conf: Conf) -> dict[str, dict]:
             _, sh, sm, _, _ = conf.SESSION_BLOCKS[si]
             start = sh * 60 + sm + slot * conf.SLOT_MIN
             lbl = re.search(r"\[(INV|LONG|SHORT)", txt)
+            g   = lbl.group(1) if lbl else ""
+            cat = {"INV": "Invited", "LONG": "Long", "SHORT": "Short"}.get(g, "")
+            minutes = conf.SHORT_MIN if cat == "Short" else conf.LONG_MIN
             outcomes[aid] = {
                 "kind":    "oral",
-                "type":    type_word.get(lbl.group(1) if lbl else "", "oral presentation"),
+                "cat":     cat,
+                "type":    type_word.get(g, "oral presentation"),
+                "minutes": minutes,
                 "day":     _weekday(day_col[cell.column]),
                 "time":    f"{start // 60:02d}:{start % 60:02d}",
                 "session": label,
@@ -140,6 +145,20 @@ def parse_schedule(conf: Conf) -> dict[str, dict]:
 
 # ─── Compose outcome text + email ──────────────────────────────────────────────
 
+def _mins(n: int) -> str:
+    return f"{n} minute" + ("s" if n != 1 else "")
+
+
+def _talk_split(conf: Conf, cat: str, minutes: int) -> tuple[int, int]:
+    """(presentation_min, question_min) for a talk slot. Defaults give 25+5 for
+    a 30-min slot and 12+3 for a 15-min slot; override via emails.question_minutes."""
+    qmap = {"Invited": 5, "Long": 5, "Short": 3}
+    qmap.update({k: int(v) for k, v in (conf.EMAILS.get("question_minutes") or {}).items()})
+    q = qmap.get(cat, 5 if minutes >= 25 else 3)
+    q = max(0, min(q, minutes))
+    return minutes - q, q
+
+
 def outcome_text(conf: Conf, o: dict | None) -> str:
     if o is None:
         return ("After careful review by the SOC, we are sorry to say that we were "
@@ -148,15 +167,25 @@ def outcome_text(conf: Conf, o: dict | None) -> str:
                 "we very much hope you will still join us at the meeting.")
     if o["kind"] == "oral":
         article = "an" if o["type"][:1].lower() in "aeiou" else "a"
+        total   = o.get("minutes", conf.LONG_MIN)
+        talk_m, q_m = _talk_split(conf, o.get("cat", ""), total)
         return (f"We are pleased to offer your contribution {article} {o['type']}.\n\n"
+                f"Your slot is {_mins(total)} in total — please plan for about "
+                f"{_mins(talk_m)} of presentation followed by {_mins(q_m)} for "
+                f"questions.\n\n"
                 f"It is scheduled for {o['day']} at {o['time']}, in the "
                 f"\"{o['session']}\" session. Please let us know as soon as possible "
                 f"if you are unable to present at this time.")
-    when = f" The poster session takes place on {o['when']}." if o.get("when") else ""
-    return ("We are pleased to offer your contribution a poster presentation."
-            + when +
-            "\n\nPosters will be on display throughout the meeting, with a short "
-            "\"sparkler\" slot to advertise them to all participants.")
+    # poster
+    sparkler_min = conf.SPARKLER_MIN
+    slides = int(conf.EMAILS.get("sparkler_slides", 1))
+    slide_word = "a single slide" if slides == 1 else f"{slides} slides"
+    when = f" The poster (sparkler) session takes place on {o['when']}." if o.get("when") else ""
+    return (f"We are pleased to offer your contribution a poster presentation.{when}\n\n"
+            f"Posters will be on display throughout the meeting. There is also a "
+            f"poster \"sparkler\" session in which each presenter has about "
+            f"{_mins(sparkler_min)} and {slide_word} to advertise their poster to "
+            f"all participants — please prepare {slide_word} for this.")
 
 
 def render_email(conf: Conf, talk, o: dict | None) -> tuple[str, str]:

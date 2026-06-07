@@ -125,3 +125,7 @@ emails:
   signature: |
     With best wishes,
     The {conf_name} SOC
+  # Minutes reserved for questions per talk category; the rest is presentation
+  # time. Defaults below give 25+5 for a 30-min slot and 12+3 for a 15-min slot.
+  question_minutes: {Invited: 5, Long: 5, Short: 3}
+  sparkler_slides: 1                     # slides each poster gets in the sparkler session
