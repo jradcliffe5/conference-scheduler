@@ -332,15 +332,26 @@ def schedule(conf: Conf, talks: list[Talk],
                         progressed = True
                         break
 
-    # ── 1. Invited talks: prefer fresh (empty) sessions ─────────────────────
+    # ── 1. Invited talks: prefer fresh (empty) sessions, then any with room ──
     inv_queue = list(invited)
-    for si, di in oral_sessions:
+    for si, di in oral_sessions:                       # pass 1: open a fresh session
         if not inv_queue:
             break
         if used_min.get((si, di), 0) == 0:
             slots = next_free_slots(si, di, n_long)
             if slots:
                 assign(slots, inv_queue.pop(0))
+    for si, di in oral_sessions:                       # pass 2: any session with room
+        if not inv_queue:
+            break
+        slots = next_free_slots(si, di, n_long)
+        if slots:
+            assign(slots, inv_queue.pop(0))
+    if inv_queue:                                      # never silently drop a keynote
+        print(f"  WARNING: {len(inv_queue)} invited talk(s) could NOT be placed — "
+              f"no session has room: {', '.join(t.abstract_id for t in inv_queue)}.\n"
+              f"           Free up an oral session (remove a fixed entry / add a day) "
+              f"and re-run, or place them by hand.")
 
     # ── 2. Long orals: prefer fresh sessions then any with room ──────────────
     long_queue = list(long_oral)
